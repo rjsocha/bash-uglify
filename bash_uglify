@@ -1,0 +1,69 @@
+#!/bin/bash
+
+_find_char() {
+local _res _l="$1" _s="$2"
+	_res=-1
+	for ((i=0;i<${#_s}; i++))
+	do
+		if [[ "$_l" == "${_s:$i:1}" ]]
+		then
+			_res=$i
+			break
+		fi
+	done
+	echo $_res
+}
+
+if [[ ! -f $1 ]]
+then
+	echo "missing input file..."
+	exit 1
+fi
+enc=$(base64 -w 0 $1)
+# hardcoded
+enc="${enc//2/|}"
+enc="${enc//t/@}"
+
+__randnames=(lO ba hY je oK lf ql or na pe tu kl Gh iU qr)
+__rl=${#__randnames[@]}
+
+_var=""
+for i in {1..4}
+do
+	_ind=$(( $RANDOM % $__rl))
+	_var="${_var}${__randnames[$_ind]}"
+done
+	
+_word="base64 -d | bash -s"
+_gen=""
+for (( n=0; n<${#_word};n++))
+do
+	_c="${_word:$n:1}"
+	#echo -n "Looking for ${_c}: "
+	_p=$(_find_char "${_c}" "${enc}")
+	#echo ${_p}
+	if [[ ${_p} -lt 0 ]]
+	then
+		_gen="${_gen}${_c}"
+	else
+		_gen="${_gen}\${${_var}:${_p}:1}"
+	fi
+done
+_decode=$_gen
+_word="eval"
+_gen=""
+for (( n=0; n<${#_word};n++))
+do
+	_c="${_word:$n:1}"
+	#echo -n "Looking for ${_c}: "
+	_p=$(_find_char "${_c}" "${enc}")
+	#echo ${_p}
+	if [[ ${_p} -lt 0 ]]
+	then
+		_gen="${_gen}${_c}"
+	else
+		_gen="${_gen}\${${_var}:${_p}:1}"
+	fi
+done
+_exe="#!/bin/bash\n${_var}=\"${enc}\";echo \${${_var}//|/2} | sed -e \"s/@/t/g\" | \"$_gen\" \"$_decode\" \$@"
+echo -e $_exe
